@@ -51,6 +51,10 @@ jobs:
       run: task test
 
   build-container:
+    needs: 
+      - lint
+      - test
+
     runs-on: ubuntu-latest
     
     permissions:
@@ -73,7 +77,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/s-schoen/${{ env.IMAGE_NAME }}
 
       - name: Build and push Docker image
         id: push
