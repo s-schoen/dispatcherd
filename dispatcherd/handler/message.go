@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"dispatcherd/dispatch"
 	"dispatcherd/service"
 	"errors"
 	"log/slog"
@@ -39,7 +40,7 @@ func (h *MessageHandler) HandlePost(w http.ResponseWriter, r *http.Request) erro
 		return OtherError(err)
 	}
 
-	if err := h.messageSvc.QueueMessage(r.Context(), service.Message{Title: body.Title, Message: body.Message, Tags: body.Tags}); err != nil {
+	if err := h.messageSvc.QueueMessage(r.Context(), dispatch.Message{Title: body.Title, Message: body.Message, Tags: body.Tags}); err != nil {
 		var apiErr APIError
 		if errors.As(err, &apiErr) {
 			return apiErr

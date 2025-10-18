@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dispatcherd/dispatch"
 	"dispatcherd/logging"
 	"dispatcherd/service"
 	"fmt"
@@ -55,7 +56,23 @@ func main() {
 	}
 
 	// setup services
-	messageService := service.NewMessageService(logger)
+	ruleEngine := dispatch.NewRuleEngine(logger)
+	// set rules manually for now
+	ruleEngine.SetRules([]dispatch.Rule{
+		{
+			ID:             "Test tag1",
+			DispatcherName: "d1",
+			Match: []dispatch.RuleMatch{
+				{
+					TagName:  "tag1",
+					Operator: dispatch.EQUALS,
+					Value:    "value1",
+				},
+			},
+		},
+	})
+
+	messageService := service.NewMessageService(logger, ruleEngine)
 
 	// start api server
 	serverOptions := ServerOptions{

@@ -2,31 +2,28 @@ package service
 
 import (
 	"context"
+	"dispatcherd/dispatch"
 	"fmt"
 	"log/slog"
 )
 
-type Message struct {
-	Title   string
-	Message string
-	Tags    map[string]string
-}
-
 type MessageService interface {
-	QueueMessage(ctx context.Context, message Message) error
+	QueueMessage(ctx context.Context, message dispatch.Message) error
 }
 
 type messageService struct {
-	logger *slog.Logger
+	logger     *slog.Logger
+	ruleEngine dispatch.RuleEngine
 }
 
-func NewMessageService(logger *slog.Logger) MessageService {
+func NewMessageService(logger *slog.Logger, ruleEngine dispatch.RuleEngine) MessageService {
 	return &messageService{
-		logger: logger,
+		logger:     logger,
+		ruleEngine: ruleEngine,
 	}
 }
 
-func (s *messageService) QueueMessage(ctx context.Context, message Message) error {
+func (s *messageService) QueueMessage(ctx context.Context, message dispatch.Message) error {
 	tags := "None"
 	if message.Tags != nil {
 		tags = ""
@@ -36,6 +33,13 @@ func (s *messageService) QueueMessage(ctx context.Context, message Message) erro
 	}
 	s.logger.DebugContext(ctx, fmt.Sprintf("received message: title='%s' message='%s' tags='%s'",
 		message.Title, message.Message, tags))
+
+	dispatcherNames, err := s.ruleEngine.ProcessMessage(ctx, &message)
+	if err != nil {
+		return fmt.Errorf("processing message: %w", err)
+	}
+
+	s.logger.DebugContext(ctx, fmt.Sprintf("matched: %v", dispatcherNames))
 
 	return nil
 }
