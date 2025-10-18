@@ -12,6 +12,10 @@ env:
 jobs:
   lint:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
     steps:
       - uses: actions/checkout@v5
       
@@ -27,6 +31,10 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
     steps:
     - uses: actions/checkout@v5
 
