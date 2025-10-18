@@ -3,15 +3,11 @@
 
 name: Build dispatcherd
 
-on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+on: [push]
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: dispatcherd
+  IMAGE_NAME: dispatcherd/dispatcherd
 
 jobs:
   lint:
@@ -51,6 +47,8 @@ jobs:
       run: task test
 
   build-container:
+    # only build when a tag is pushed
+    if: github.ref_type == 'tag'
     needs: 
       - lint
       - test
