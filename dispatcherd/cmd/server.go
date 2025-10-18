@@ -5,6 +5,7 @@ import (
 	"dispatcherd/handler"
 	"dispatcherd/logging"
 	"dispatcherd/middleware"
+	"dispatcherd/service"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -20,24 +21,27 @@ import (
 )
 
 type ServerOptions struct {
-	ListenAddress string
-	Logger        *slog.Logger
-	CorsOrigin    string
+	ListenAddress  string
+	Logger         *slog.Logger
+	CorsOrigin     string
+	MessageService service.MessageService
 }
 
 type Server struct {
-	ListenAddress string
-	logger        *slog.Logger
-	router        chi.Router
-	corsOrigin    string
+	ListenAddress  string
+	logger         *slog.Logger
+	router         chi.Router
+	corsOrigin     string
+	messageService service.MessageService
 }
 
 func NewServer(opts ServerOptions) *Server {
 	return &Server{
-		ListenAddress: opts.ListenAddress,
-		router:        chi.NewRouter(),
-		logger:        opts.Logger,
-		corsOrigin:    opts.CorsOrigin,
+		ListenAddress:  opts.ListenAddress,
+		router:         chi.NewRouter(),
+		logger:         opts.Logger,
+		corsOrigin:     opts.CorsOrigin,
+		messageService: opts.MessageService,
 	}
 }
 
@@ -56,8 +60,11 @@ func (s *Server) Start() {
 	s.router.Use(chiMiddleware.AllowContentType("application/json"))
 	s.router.Use(chiMiddleware.Recoverer)
 
+	dispatchHandler := handler.NewDispatchHandler(s.logger, s.messageService)
+
 	// register public routes
 	s.router.Get("/health", handler.Make(handler.HandleHealth))
+	s.router.Post("/message", handler.Make(dispatchHandler.HandlePost))
 
 	// setup default handlers
 	s.router.NotFound(func(w http.ResponseWriter, r *http.Request) {

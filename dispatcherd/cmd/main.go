@@ -2,6 +2,7 @@ package main
 
 import (
 	"dispatcherd/logging"
+	"dispatcherd/service"
 	"fmt"
 	"log/slog"
 	"os"
@@ -53,11 +54,15 @@ func main() {
 		logger = slog.New(slog.NewJSONHandler(w, loggerOptions))
 	}
 
+	// setup services
+	messageService := service.NewMessageService(logger)
+
 	// start api server
 	serverOptions := ServerOptions{
-		ListenAddress: appConfig.ListenAddress,
-		Logger:        logger,
-		CorsOrigin:    appConfig.CORSOrigin,
+		ListenAddress:  appConfig.ListenAddress,
+		Logger:         logger,
+		CorsOrigin:     appConfig.CORSOrigin,
+		MessageService: messageService,
 	}
 
 	logger.Debug("allowed CORS origin: " + appConfig.CORSOrigin)

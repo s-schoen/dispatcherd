@@ -134,6 +134,13 @@ func InvalidRequest(message string, validationError error) APIError {
 	}
 }
 
+func OtherError(err error) APIError {
+	return APIError{
+		StatusCode: http.StatusInternalServerError,
+		Message:    err.Error(),
+	}
+}
+
 /********** API Functions **********/
 
 type APIFunc func(w http.ResponseWriter, r *http.Request) error
@@ -191,6 +198,17 @@ func respondOneWithStatus[T any](w http.ResponseWriter, r *http.Request, status 
 	response := NewSingleDataResponse(dispatcherdContext.RequestID(r.Context()), data)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func ParseAndValidateBody[T any](target *T, r *http.Request, validate *validator.Validate) error {
+	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
+		return InvalidRequest("cannot parse request body", nil)
+	}
+	if err := validate.Struct(target); err != nil {
+		return InvalidRequest("invalid body", err)
 	}
 
 	return nil
