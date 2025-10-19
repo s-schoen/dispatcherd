@@ -6,8 +6,6 @@ import (
 	"log/slog"
 )
 
-var DefaultDispatcher = []string{""}
-
 type RuleOperator string
 
 const (
@@ -49,7 +47,7 @@ func (e *DefaultRuleEngine) SetRules(rules []Rule) {
 func (e *DefaultRuleEngine) ProcessMessage(ctx context.Context, msg *Message) ([]string, error) {
 	if msg.Tags == nil {
 		// no tags, so matching does not make sense
-		return DefaultDispatcher, nil
+		return []string{}, nil
 	}
 
 	var dispatchers []string
@@ -63,7 +61,7 @@ func (e *DefaultRuleEngine) ProcessMessage(ctx context.Context, msg *Message) ([
 
 	if len(dispatchers) == 0 {
 		// no match, return default
-		return DefaultDispatcher, nil
+		return []string{}, nil
 	}
 
 	return dispatchers, nil
