@@ -33,7 +33,13 @@ tasks:
     cmds:
       - golangci-lint run --fix
 
+  genmock:
+    cmds:
+      - mockery
+
   test:
+    deps:
+      - genmock
     cmds:
       - go test -coverprofile build/coverage ./...
 

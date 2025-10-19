@@ -10,13 +10,13 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type dispatchPostBody struct {
+type PostMessageRequestBody struct {
 	Title   string            `json:"title" validate:"required"`
 	Message string            `json:"message" validate:"required"`
 	Tags    map[string]string `json:"tags"`
 }
 
-type dispatchPostResponse struct {
+type PostMessageResponse struct {
 	MessageID string `json:"messageId"`
 }
 
@@ -35,7 +35,7 @@ func NewDispatchHandler(logger *slog.Logger, msgSvc service.MessageService) *Mes
 }
 
 func (h *MessageHandler) HandlePost(w http.ResponseWriter, r *http.Request) error {
-	var body dispatchPostBody
+	var body PostMessageRequestBody
 	if err := ParseAndValidateBody(&body, r, h.validate); err != nil {
 		var apiErr APIError
 		if errors.As(err, &apiErr) {
@@ -54,7 +54,7 @@ func (h *MessageHandler) HandlePost(w http.ResponseWriter, r *http.Request) erro
 		return OtherError(err)
 	}
 
-	return respondOne(w, r, dispatchPostResponse{
+	return RespondOne(w, r, PostMessageResponse{
 		MessageID: message.ID,
 	})
 }

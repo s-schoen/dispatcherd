@@ -12,24 +12,23 @@ import (
 
 /********** Responses **********/
 
-//nolint:unused // will be used in the future
-type arrayDataResponse[T any] struct {
+type ArrayDataResponse[T any] struct {
 	ID         string               `json:"id"`
 	APIVersion int                  `json:"apiVersion"`
-	Data       apiComponentArray[T] `json:"data"`
+	Data       APIComponentArray[T] `json:"data"`
 }
 
 //nolint:unused // will be used in the future
-func newArrayDataResponse[T any](id string, data []T) arrayDataResponse[T] {
+func newArrayDataResponse[T any](id string, data []T) ArrayDataResponse[T] {
 	dataList := data
 	if dataList == nil {
 		dataList = []T{}
 	}
 
-	return arrayDataResponse[T]{
+	return ArrayDataResponse[T]{
 		ID:         id,
 		APIVersion: 1,
-		Data: apiComponentArray[T]{
+		Data: APIComponentArray[T]{
 			TotalItems:       len(data),
 			Items:            dataList,
 			StartIndex:       0,
@@ -52,36 +51,36 @@ func NewSingleDataResponse[T any](id string, d T) SingleDataResponse[T] {
 	}
 }
 
-type errorResponse struct {
+type ErrorResponse struct {
 	ID         string             `json:"id"`
 	APIVersion int                `json:"apiVersion"`
-	Error      errorResponseValue `json:"error"`
+	Error      ErrorResponseValue `json:"error"`
 }
 
-type errorResponseValue struct {
+type ErrorResponseValue struct {
 	Code    int                  `json:"code"`
 	Message string               `json:"message"`
-	Errors  []errorResponseStack `json:"errors"`
+	Errors  []ErrorResponseStack `json:"errors"`
 }
 
-type errorResponseStack struct {
+type ErrorResponseStack struct {
 	Message string `json:"message"`
 	Reason  string `json:"reason"`
 }
 
-func newErrorResponse(id string, code int, message string, errors []error) errorResponse {
-	resp := errorResponse{
+func newErrorResponse(id string, code int, message string, errors []error) ErrorResponse {
+	resp := ErrorResponse{
 		ID:         id,
 		APIVersion: 1,
-		Error: errorResponseValue{
+		Error: ErrorResponseValue{
 			Code:    code,
 			Message: message,
-			Errors:  []errorResponseStack{},
+			Errors:  []ErrorResponseStack{},
 		},
 	}
 
 	for _, e := range errors {
-		resp.Error.Errors = append(resp.Error.Errors, errorResponseStack{
+		resp.Error.Errors = append(resp.Error.Errors, ErrorResponseStack{
 			Message: e.Error(),
 			Reason:  e.Error(),
 		})
@@ -91,7 +90,7 @@ func newErrorResponse(id string, code int, message string, errors []error) error
 }
 
 //nolint:unused // will be used in the future
-type apiComponentArray[T any] struct {
+type APIComponentArray[T any] struct {
 	CurrentItemCount int `json:"currentItemCount"`
 	StartIndex       int `json:"startIndex"`
 	TotalItems       int `json:"totalItems"`
@@ -171,17 +170,16 @@ func RespondError(w http.ResponseWriter, r *http.Request, status int, err error)
 	}
 }
 
-func respondOne[T any](w http.ResponseWriter, r *http.Request, data T) error {
+func RespondOne[T any](w http.ResponseWriter, r *http.Request, data T) error {
 	return respondOneWithStatus(w, r, http.StatusOK, data)
 }
 
 //nolint:unused // will be used in the future
-func respondOneCreated[T any](w http.ResponseWriter, r *http.Request, data T) error {
+func RespondOneCreated[T any](w http.ResponseWriter, r *http.Request, data T) error {
 	return respondOneWithStatus(w, r, http.StatusCreated, data)
 }
 
-//nolint:unused // will be used in the future
-func respondMany[T any](w http.ResponseWriter, r *http.Request, data []T) error {
+func RespondMany[T any](w http.ResponseWriter, r *http.Request, data []T) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	response := newArrayDataResponse(dispatcherdContext.RequestID(r.Context()), data)
