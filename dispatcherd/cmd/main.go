@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"dispatcherd/dispatch"
 	"dispatcherd/logging"
+	"dispatcherd/repository"
 	"dispatcherd/service"
 	"fmt"
 	"log/slog"
@@ -21,6 +23,7 @@ type AppConfig struct {
 	LogLevel      slog.Level `env:"DISPATCHERD_LOG_LEVEL"`
 	Environment   string     `env:"DISPATCHERD_ENVIRONMENT"`
 	CORSOrigin    string     `env:"DISPATCHERD_CORS_ALLOWED_ORIGIN"`
+	RuleDirectory string     `env:"DISPATCHERD_RULE_DIRECTORY"`
 }
 
 func main() {
@@ -30,6 +33,7 @@ func main() {
 		LogLevel:      slog.LevelDebug,
 		Environment:   EnvDev,
 		CORSOrigin:    "*",
+		RuleDirectory: "/data/rules",
 	}
 	if err := env.Parse(&appConfig); err != nil {
 		fmt.Println(err)
@@ -56,21 +60,17 @@ func main() {
 	}
 
 	// setup services
+	ruleRepo := repository.NewFilesystemRuleRepository(logger, appConfig.RuleDirectory)
 	ruleEngine := dispatch.NewRuleEngine(logger)
-	// set rules manually for now
-	ruleEngine.SetRules([]dispatch.Rule{
-		{
-			ID:             "Test tag1",
-			DispatcherName: "d1",
-			Match: []dispatch.RuleMatch{
-				{
-					TagName:  "tag1",
-					Operator: dispatch.EQUALS,
-					Value:    "value1",
-				},
-			},
-		},
-	})
+
+	// load rules from fs
+	rules, err := ruleRepo.ListRules(context.Background())
+	if err != nil {
+		logger.Error("failed to load rules", logging.LoggerFieldError, err)
+		os.Exit(1)
+	}
+	
+	ruleEngine.SetRules(rules)
 
 	messageService := service.NewMessageService(logger, ruleEngine)
 	messageService.RegisterDispatcher(dispatch.NewLogDispatcher(logger), true)
