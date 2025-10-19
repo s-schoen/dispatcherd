@@ -2,22 +2,39 @@ package middleware
 
 import (
 	"context"
-	dispatcherContext "dispatcherd/context"
+	dispatcherdContext "dispatcherd/context"
 	"net/http"
 
 	"github.com/google/uuid"
 )
 
-func RequestID(next http.Handler) http.Handler {
+type RequestIDMiddleware struct {
+	RequestIDHeader    string
+	RequestIDGenerator func() string
+}
+
+func NewRequestIDMiddleware(generatorFunc func() string) *RequestIDMiddleware {
+	return &RequestIDMiddleware{
+		RequestIDGenerator: generatorFunc,
+		RequestIDHeader:    "X-Request-ID",
+	}
+}
+
+func NewUUIDv4RequestIDMiddleWare() *RequestIDMiddleware {
+	return NewRequestIDMiddleware(func() string {
+		return uuid.New().String()
+	})
+}
+
+func (h *RequestIDMiddleware) OnRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: only allow certain origins
-		requestID := r.Header.Get("x-request-id")
+		requestID := r.Header.Get(h.RequestIDHeader)
 
 		if requestID == "" {
-			requestID = uuid.New().String()
+			requestID = h.RequestIDGenerator()
 		}
 
-		ctx := context.WithValue(r.Context(), dispatcherContext.KeyRequestID, requestID)
+		ctx := context.WithValue(r.Context(), dispatcherdContext.KeyRequestID, requestID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

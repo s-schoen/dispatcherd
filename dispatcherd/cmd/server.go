@@ -52,10 +52,13 @@ func (s *Server) Start() {
 	}
 
 	// register middleware
+	requestIDMiddleware := middleware.NewUUIDv4RequestIDMiddleWare()
+	requestLoggerMiddleware := middleware.NewRequestLoggerMiddleware(s.logger)
+
 	s.router.Use(cors.New(corsOptions).Handler)
 	s.router.Use(middleware.SecurityHeaders())
-	s.router.Use(middleware.RequestID)
-	s.router.Use(middleware.RequestLogger(s.logger))
+	s.router.Use(requestIDMiddleware.OnRequest)
+	s.router.Use(requestLoggerMiddleware.OnRequest)
 
 	s.router.Use(chiMiddleware.AllowContentType("application/json"))
 	s.router.Use(chiMiddleware.Recoverer)
