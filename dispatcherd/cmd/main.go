@@ -73,6 +73,7 @@ func main() {
 	})
 
 	messageService := service.NewMessageService(logger, ruleEngine)
+	messageService.RegisterDispatcher(dispatch.NewLogDispatcher(logger), true)
 
 	// start api server
 	serverOptions := ServerOptions{
