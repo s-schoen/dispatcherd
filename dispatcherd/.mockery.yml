@@ -11,6 +11,16 @@ require-template-schema-exists: true
 template: matryer
 template-schema: '{{.Template}}.schema.json'
 packages:
+  dispatcherd/dispatch:
+    interfaces:
+      RuleEngine:
+        config:
+          dir: service
+          pkgname: service_test
+      Dispatcher:
+        config:
+          dir: service
+          pkgname: service_test
   dispatcherd/service:
     interfaces:
       MessageService:
