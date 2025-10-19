@@ -10,29 +10,19 @@ import (
 
 type MessageService interface {
 	QueueMessage(ctx context.Context, message *dispatch.Message) error
-	RegisterDispatcher(dispatcher dispatch.Dispatcher, isDefault bool)
 }
 
 type messageService struct {
 	logger            *slog.Logger
 	ruleEngine        dispatch.RuleEngine
-	dispatcher        []dispatch.Dispatcher
-	defaultDispatcher dispatch.Dispatcher
+	dispatcherService DispatcherService
 }
 
-func NewMessageService(logger *slog.Logger, ruleEngine dispatch.RuleEngine) MessageService {
+func NewMessageService(logger *slog.Logger, ruleEngine dispatch.RuleEngine, dispatcherService DispatcherService) MessageService {
 	return &messageService{
-		logger:     logger,
-		ruleEngine: ruleEngine,
-		dispatcher: make([]dispatch.Dispatcher, 0),
-	}
-}
-
-func (s *messageService) RegisterDispatcher(dispatcher dispatch.Dispatcher, isDefault bool) {
-	s.dispatcher = append(s.dispatcher, dispatcher)
-	if isDefault {
-		s.defaultDispatcher = dispatcher
-		s.logger.Info(fmt.Sprintf("default dispatcher set to %s", dispatcher.Name()))
+		logger:            logger,
+		ruleEngine:        ruleEngine,
+		dispatcherService: dispatcherService,
 	}
 }
 
@@ -48,30 +38,38 @@ func (s *messageService) QueueMessage(ctx context.Context, message *dispatch.Mes
 
 	if len(dispatcherNames) == 0 {
 		// use default dispatcher
-		if s.defaultDispatcher != nil {
-			if err := s.defaultDispatcher.Dispatch(msgCtx, message); err != nil {
-				s.logger.ErrorContext(msgCtx, "failed to dispatch message using default dispatcher", logging.LoggerFieldError, err)
-				return fmt.Errorf("dispatching message: %w", err)
-			}
-			s.logger.InfoContext(msgCtx, "message dispatched using default dispatcher ("+s.defaultDispatcher.Name()+")")
+		defaultDispatchers, err := s.dispatcherService.GetDefaultDispatchers()
+		if err != nil {
+			s.logger.ErrorContext(msgCtx, "failed to get default dispatchers", logging.LoggerFieldError, err)
+			return fmt.Errorf("getting default dispatchers: %w", err)
+		}
+
+		if len(defaultDispatchers) > 0 {
+			s.invokeDispatchers(msgCtx, message, defaultDispatchers)
+			s.logger.InfoContext(msgCtx, "message dispatched using default dispatchers")
 		} else {
 			s.logger.WarnContext(msgCtx, "no dispatchers matched, and no default dispatcher is configured")
 		}
 	} else {
 		for _, dispatcherName := range dispatcherNames {
-			for _, dispatcher := range s.dispatcher {
-				if dispatcher.Name() == dispatcherName {
-					s.logger.DebugContext(msgCtx, "dispatching message using "+dispatcherName)
-					if err := dispatcher.Dispatch(msgCtx, message); err != nil {
-						s.logger.ErrorContext(msgCtx, "failed to dispatch message using "+dispatcherName, logging.LoggerFieldError, err)
-						break
-					}
-					s.logger.DebugContext(msgCtx, "message dispatched using "+dispatcherName)
-				}
+			dispatcher, err := s.dispatcherService.GetDispatcher(dispatcherName)
+			if err != nil {
+				s.logger.ErrorContext(msgCtx, "failed to get dispatcher "+dispatcherName, logging.LoggerFieldError, err)
+				return fmt.Errorf("getting dispatcher '%s': %w", dispatcherName, err)
 			}
+			s.invokeDispatchers(msgCtx, message, []dispatch.Dispatcher{dispatcher})
 		}
 		s.logger.InfoContext(msgCtx, "message dispatched")
 	}
 
 	return nil
+}
+
+func (s *messageService) invokeDispatchers(ctx context.Context, message *dispatch.Message, dispatchers []dispatch.Dispatcher) {
+	for _, dispatcher := range dispatchers {
+		if err := dispatcher.Dispatch(ctx, message); err != nil {
+			s.logger.ErrorContext(ctx, "failed to dispatch message", logging.LoggerFieldError, err)
+			break
+		}
+	}
 }

@@ -16,11 +16,6 @@ func TestNewLogDispatcher(t *testing.T) {
 	assert.Equal(t, logger, dispatcher.logger)
 }
 
-func TestLogDispatcherName(t *testing.T) {
-	dispatcher := LogDispatcher{}
-	assert.Equal(t, "log", dispatcher.Name())
-}
-
 func TestLogDispatcherDispatch(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
