@@ -8,12 +8,6 @@ import (
 
 var DefaultDispatcher = []string{""}
 
-type Message struct {
-	Title   string
-	Message string
-	Tags    map[string]string
-}
-
 type RuleOperator string
 
 const (

@@ -8,7 +8,7 @@ import (
 )
 
 type MessageService interface {
-	QueueMessage(ctx context.Context, message dispatch.Message) error
+	QueueMessage(ctx context.Context, message *dispatch.Message) error
 }
 
 type messageService struct {
@@ -23,23 +23,17 @@ func NewMessageService(logger *slog.Logger, ruleEngine dispatch.RuleEngine) Mess
 	}
 }
 
-func (s *messageService) QueueMessage(ctx context.Context, message dispatch.Message) error {
-	tags := "None"
-	if message.Tags != nil {
-		tags = ""
-		for k, v := range message.Tags {
-			tags += fmt.Sprintf("%s:%s;", k, v)
-		}
-	}
-	s.logger.DebugContext(ctx, fmt.Sprintf("received message: title='%s' message='%s' tags='%s'",
-		message.Title, message.Message, tags))
+func (s *messageService) QueueMessage(ctx context.Context, message *dispatch.Message) error {
+	msgCtx := message.AnnotateContext(ctx)
 
-	dispatcherNames, err := s.ruleEngine.ProcessMessage(ctx, &message)
+	s.logger.DebugContext(msgCtx, fmt.Sprintf("received message: %s", message.String()))
+
+	dispatcherNames, err := s.ruleEngine.ProcessMessage(msgCtx, message)
 	if err != nil {
 		return fmt.Errorf("processing message: %w", err)
 	}
 
-	s.logger.DebugContext(ctx, fmt.Sprintf("matched: %v", dispatcherNames))
+	s.logger.DebugContext(msgCtx, fmt.Sprintf("matched: %v", dispatcherNames))
 
 	return nil
 }

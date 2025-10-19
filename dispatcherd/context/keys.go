@@ -8,6 +8,7 @@ type Key string
 
 const (
 	KeyRequestID Key = "request-id"
+	KeyMessageID     = "message-id"
 )
 
 func RequestID(ctx context.Context) string {
