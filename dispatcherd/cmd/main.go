@@ -81,14 +81,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	dispatcherService := service.NewDispatcherService(logger)
+	messageService := service.NewDefaultMessageService(logger, ruleEngine)
+
 	for _, config := range dispatcherConfigs {
-		if err := dispatcherService.LoadDispatcherConfig(config); err != nil {
+		if err := messageService.LoadDispatcherConfig(config); err != nil {
 			logger.Error("failed to load dispatcher config "+config.Name, logging.LoggerFieldError, err)
 		}
 	}
-
-	messageService := service.NewMessageService(logger, ruleEngine, dispatcherService)
 
 	// start api server
 	serverOptions := ServerOptions{

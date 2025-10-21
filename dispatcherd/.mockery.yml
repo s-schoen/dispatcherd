@@ -17,10 +17,6 @@ packages:
         config:
           dir: service
           pkgname: service_test
-      Dispatcher:
-        config:
-          dir: service
-          pkgname: service_test
   dispatcherd/service:
     interfaces:
       MessageService:

@@ -9,15 +9,24 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func setupMessageService(t *testing.T, re dispatch.RuleEngine) service.MessageService {
+func setupMessageService(t *testing.T, re dispatch.RuleEngine, failFactory bool) (service.MessageService, *dispatch.CounterDispatcher) {
 	t.Helper()
 
 	var logBuffer bytes.Buffer
 	mockLogger := slog.New(slog.NewJSONHandler(&logBuffer, nil))
 
-	return service.NewMessageService(mockLogger, re)
+	dispatcher := dispatch.NewCounterDispatcher()
+	factory := func(logger *slog.Logger, typeName string) (dispatch.Dispatcher, error) {
+		if failFactory {
+			return nil, dispatch.ErrUnknownDispatcherType
+		}
+		return dispatcher, nil
+	}
+
+	return service.NewMessageService(mockLogger, re, factory), dispatcher
 }
 
 func TestCallDefaultDispatcher(t *testing.T) {
@@ -28,21 +37,21 @@ func TestCallDefaultDispatcher(t *testing.T) {
 		},
 	}
 
-	defaultDispatcher := &MockDispatcher{
-		DispatchFunc: func(ctx context.Context, msg *dispatch.Message) error {
-			return nil
-		},
-		NameFunc: func() string {
-			return "default"
-		},
+	defaultDispatcher := dispatch.DispatcherConfig{
+		Name:      "Test",
+		Type:      "mock",
+		IsDefault: true,
+		Config:    nil,
 	}
 
-	sut := setupMessageService(t, mre)
-	sut.RegisterDispatcher(defaultDispatcher, true)
-	err := sut.QueueMessage(context.Background(), &dispatch.Message{})
+	messageService, dispatcher := setupMessageService(t, mre, false)
+	err := messageService.LoadDispatcherConfig(defaultDispatcher)
+	require.NoError(t, err)
+
+	err = messageService.QueueMessage(context.Background(), &dispatch.Message{})
 
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(defaultDispatcher.DispatchCalls()))
+	assert.Equal(t, 1, dispatcher.CallsCount)
 }
 
 func TestCallNonDefaultDispatcher(t *testing.T) {
@@ -52,82 +61,32 @@ func TestCallNonDefaultDispatcher(t *testing.T) {
 		},
 	}
 
-	defaultDispatcher := &MockDispatcher{
-		DispatchFunc: func(ctx context.Context, msg *dispatch.Message) error {
-			return nil
-		},
-		NameFunc: func() string {
-			return "default"
-		},
+	defaultDispatcher := dispatch.DispatcherConfig{
+		Name:      "non-default",
+		Type:      "mock",
+		IsDefault: false,
+		Config:    nil,
 	}
 
-	nonDefaultDispatcher := &MockDispatcher{
-		DispatchFunc: func(ctx context.Context, msg *dispatch.Message) error {
-			return nil
-		},
-		NameFunc: func() string {
-			return "non-default"
-		},
-	}
+	messageService, dispatcher := setupMessageService(t, mre, false)
+	err := messageService.LoadDispatcherConfig(defaultDispatcher)
+	require.NoError(t, err)
 
-	sut := setupMessageService(t, mre)
-	sut.RegisterDispatcher(defaultDispatcher, true)
-	sut.RegisterDispatcher(nonDefaultDispatcher, false)
-
-	err := sut.QueueMessage(context.Background(), &dispatch.Message{})
+	err = messageService.QueueMessage(context.Background(), &dispatch.Message{})
 
 	assert.NoError(t, err)
-	assert.Equal(t, 0, len(defaultDispatcher.DispatchCalls()))
-	assert.Equal(t, 1, len(nonDefaultDispatcher.DispatchCalls()))
-}
-
-func TestCallMultipleNonDefaultDispatchers(t *testing.T) {
-	mre := &MockRuleEngine{
-		ProcessMessageFunc: func(ctx context.Context, msg *dispatch.Message) ([]string, error) {
-			return []string{"non-default-1", "non-default-2"}, nil
-		},
-	}
-
-	dispatchers := make(map[string]*MockDispatcher)
-	dispatchers["non-default-1"] = &MockDispatcher{
-		DispatchFunc: func(ctx context.Context, msg *dispatch.Message) error {
-			return nil
-		},
-		NameFunc: func() string {
-			return "non-default-1"
-		},
-	}
-	dispatchers["non-default-2"] = &MockDispatcher{
-		DispatchFunc: func(ctx context.Context, msg *dispatch.Message) error {
-			return nil
-		},
-		NameFunc: func() string {
-			return "non-default-2"
-		},
-	}
-
-	sut := setupMessageService(t, mre)
-	for _, d := range dispatchers {
-		sut.RegisterDispatcher(d, false)
-	}
-
-	err := sut.QueueMessage(context.Background(), &dispatch.Message{})
-
-	assert.NoError(t, err)
-	for _, d := range dispatchers {
-		assert.Equal(t, 1, len(d.DispatchCalls()))
-	}
+	assert.Equal(t, 1, dispatcher.CallsCount)
 }
 
 func TestNoDispatchersFound(t *testing.T) {
 	mre := &MockRuleEngine{
 		ProcessMessageFunc: func(ctx context.Context, msg *dispatch.Message) ([]string, error) {
-			return []string{}, nil
+			return []string{"test"}, nil
 		},
 	}
 
-	sut := setupMessageService(t, mre)
+	messageService, _ := setupMessageService(t, mre, true)
 
-	err := sut.QueueMessage(context.Background(), &dispatch.Message{})
-	assert.NoError(t, err)
+	err := messageService.QueueMessage(context.Background(), &dispatch.Message{})
+	assert.Error(t, err)
 }

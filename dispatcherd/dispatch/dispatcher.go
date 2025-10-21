@@ -2,7 +2,11 @@ package dispatch
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 )
+
+var ErrUnknownDispatcherType = errors.New("unknown dispatcher type")
 
 type Dispatcher interface {
 	Dispatch(ctx context.Context, msg *Message) error
@@ -15,4 +19,15 @@ type DispatcherConfig struct {
 	Type      string                 `json:"type" validate:"required"`
 	IsDefault bool                   `json:"isDefault"`
 	Config    map[string]interface{} `json:"config"`
+}
+
+func DispatcherFactory(logger *slog.Logger, dispatcherType string) (Dispatcher, error) {
+	switch dispatcherType {
+	case "log":
+		return NewLogDispatcher(logger), nil
+	case "counter":
+		return NewCounterDispatcher(), nil
+	default:
+		return nil, ErrUnknownDispatcherType
+	}
 }
