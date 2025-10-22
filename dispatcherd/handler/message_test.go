@@ -1,26 +1,16 @@
 package handler_test
 
 import (
-	"bytes"
 	"context"
 	"dispatcherd/dispatch"
 	"dispatcherd/handler"
 	"dispatcherd/test"
 	"errors"
-	"log/slog"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func setupMessageHandler(t *testing.T, svc *MockMessageService) *handler.MessageHandler {
-	t.Helper()
-	var logBuffer bytes.Buffer
-	mockLogger := slog.New(slog.NewJSONHandler(&logBuffer, nil))
-
-	return handler.NewDispatchHandler(mockLogger, svc)
-}
 
 func TestPostMessageSuccess(t *testing.T) {
 	mockSvc := &MockMessageService{
@@ -28,7 +18,7 @@ func TestPostMessageSuccess(t *testing.T) {
 			return nil
 		},
 	}
-	h := setupMessageHandler(t, mockSvc)
+	h := handler.NewDispatchHandler(mockSvc)
 
 	body := `{"title": "Test Title", "message": "Test Message"}`
 	runner := test.NewTestRunner(h.HandlePost)
@@ -42,7 +32,7 @@ func TestPostMessageInvalidBody(t *testing.T) {
 			return nil
 		},
 	}
-	h := setupMessageHandler(t, mockSvc)
+	h := handler.NewDispatchHandler(mockSvc)
 
 	body := `{"title": "Test Title"}`
 	runner := test.NewTestRunner(h.HandlePost)
@@ -56,7 +46,7 @@ func TestPostMessageInternalError(t *testing.T) {
 			return errors.New("test")
 		},
 	}
-	h := setupMessageHandler(t, mockSvc)
+	h := handler.NewDispatchHandler(mockSvc)
 
 	body := `{"title": "Test Title", "message": "Test Message"}`
 	runner := test.NewTestRunner(h.HandlePost)
@@ -70,7 +60,7 @@ func TestPostMessageAPIError(t *testing.T) {
 			return handler.NotFound("message", "")
 		},
 	}
-	h := setupMessageHandler(t, mockSvc)
+	h := handler.NewDispatchHandler(mockSvc)
 
 	body := `{"title": "Test Title", "message": "Test Message"}`
 	runner := test.NewTestRunner(h.HandlePost)

@@ -1,32 +1,29 @@
 package service_test
 
 import (
-	"bytes"
 	"context"
 	"dispatcherd/dispatch"
 	"dispatcherd/service"
-	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: tests are not really meaningful this way, we need to mock the factory in each test individually to improve
+
 func setupMessageService(t *testing.T, re dispatch.RuleEngine, failFactory bool) (service.MessageService, *dispatch.CounterDispatcher) {
 	t.Helper()
 
-	var logBuffer bytes.Buffer
-	mockLogger := slog.New(slog.NewJSONHandler(&logBuffer, nil))
-
 	dispatcher := dispatch.NewCounterDispatcher()
-	factory := func(logger *slog.Logger, typeName string) (dispatch.Dispatcher, error) {
+	factory := func(typeName string) (dispatch.Dispatcher, error) {
 		if failFactory {
 			return nil, dispatch.ErrUnknownDispatcherType
 		}
 		return dispatcher, nil
 	}
 
-	return service.NewMessageService(mockLogger, re, factory), dispatcher
+	return service.NewMessageService(re, factory), dispatcher
 }
 
 func TestCallDefaultDispatcher(t *testing.T) {

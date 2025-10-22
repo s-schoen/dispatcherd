@@ -3,7 +3,6 @@ package dispatch
 import (
 	"context"
 	"errors"
-	"log/slog"
 )
 
 var ErrUnknownDispatcherType = errors.New("unknown dispatcher type")
@@ -21,10 +20,10 @@ type DispatcherConfig struct {
 	Config    map[string]interface{} `json:"config"`
 }
 
-func DispatcherFactory(logger *slog.Logger, dispatcherType string) (Dispatcher, error) {
+func DispatcherFactory(dispatcherType string) (Dispatcher, error) {
 	switch dispatcherType {
 	case "log":
-		return NewLogDispatcher(logger), nil
+		return NewLogDispatcher(), nil
 	case "counter":
 		return NewCounterDispatcher(), nil
 	default:

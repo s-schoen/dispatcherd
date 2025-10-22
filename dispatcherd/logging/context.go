@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	LoggerFieldRequestID string = "requestId"
-	LoggerFieldMessageID string = "messageId"
-	LoggerFieldError     string = "error"
+	FieldRequestID string = "requestId"
+	FieldMessageID string = "messageId"
+	FieldError     string = "error"
 )
 
 type ContextHandler struct {
@@ -18,11 +18,11 @@ type ContextHandler struct {
 
 func (h ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	if val, ok := ctx.Value(dispatcherdContext.KeyRequestID).(string); ok {
-		r.AddAttrs(slog.String(LoggerFieldRequestID, val))
+		r.AddAttrs(slog.String(FieldRequestID, val))
 	}
 
 	if val, ok := ctx.Value(dispatcherdContext.KeyMessageID).(string); ok {
-		r.AddAttrs(slog.String(LoggerFieldMessageID, val))
+		r.AddAttrs(slog.String(FieldMessageID, val))
 	}
 
 	return h.Handler.Handle(ctx, r)

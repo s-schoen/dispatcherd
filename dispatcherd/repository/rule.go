@@ -20,9 +20,9 @@ type FilesystemRuleRepository struct {
 	ruleDirectory string
 }
 
-func NewFilesystemRuleRepository(logger *slog.Logger, ruleDirectory string) *FilesystemRuleRepository {
+func NewFilesystemRuleRepository(ruleDirectory string) *FilesystemRuleRepository {
 	return &FilesystemRuleRepository{
-		logger:        logger,
+		logger:        logging.GetLogger(logging.DataAccess),
 		ruleDirectory: ruleDirectory,
 	}
 }
@@ -42,13 +42,13 @@ func (r *FilesystemRuleRepository) ListRules(ctx context.Context) ([]dispatch.Ru
 			filePath := filepath.Join(r.ruleDirectory, file.Name())
 			fileContent, err := os.ReadFile(filePath)
 			if err != nil {
-				r.logger.ErrorContext(ctx, "failed to read rule file", logging.LoggerFieldError, err, "file", filePath)
+				r.logger.ErrorContext(ctx, "failed to read rule file", logging.FieldError, err, "file", filePath)
 				continue
 			}
 
 			var rule dispatch.Rule
 			if err := json.Unmarshal(fileContent, &rule); err != nil {
-				r.logger.ErrorContext(ctx, "failed to unmarshal rule file", logging.LoggerFieldError, err, "file", filePath)
+				r.logger.ErrorContext(ctx, "failed to unmarshal rule file", logging.FieldError, err, "file", filePath)
 				continue
 			}
 			rules = append(rules, rule)

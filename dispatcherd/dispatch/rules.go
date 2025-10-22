@@ -2,8 +2,8 @@ package dispatch
 
 import (
 	"context"
+	"dispatcherd/logging"
 	"fmt"
-	"log/slog"
 )
 
 type RuleOperator string
@@ -29,14 +29,12 @@ type RuleEngine interface {
 }
 
 type DefaultRuleEngine struct {
-	logger *slog.Logger
-	rules  []Rule
+	rules []Rule
 }
 
-func NewRuleEngine(logger *slog.Logger) *DefaultRuleEngine {
+func NewRuleEngine() *DefaultRuleEngine {
 	return &DefaultRuleEngine{
-		logger: logger,
-		rules:  make([]Rule, 0),
+		rules: make([]Rule, 0),
 	}
 }
 
@@ -45,6 +43,8 @@ func (e *DefaultRuleEngine) SetRules(rules []Rule) {
 }
 
 func (e *DefaultRuleEngine) ProcessMessage(ctx context.Context, msg *Message) ([]string, error) {
+	logger := logging.GetLogger(logging.MessageProcessing)
+
 	if msg.Tags == nil {
 		// no tags, so matching does not make sense
 		return []string{}, nil
@@ -52,9 +52,9 @@ func (e *DefaultRuleEngine) ProcessMessage(ctx context.Context, msg *Message) ([
 
 	var dispatchers []string
 	for _, rule := range e.rules {
-		e.logger.DebugContext(ctx, fmt.Sprintf("validating rule '%s'", rule.ID))
+		logger.DebugContext(ctx, fmt.Sprintf("validating rule '%s'", rule.ID))
 		if e.ruleMatch(rule, msg.Tags) {
-			e.logger.DebugContext(ctx, fmt.Sprintf("matched rule '%s'", rule.ID))
+			logger.DebugContext(ctx, fmt.Sprintf("matched rule '%s'", rule.ID))
 			dispatchers = append(dispatchers, rule.DispatcherName)
 		}
 	}

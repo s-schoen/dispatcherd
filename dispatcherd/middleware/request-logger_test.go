@@ -14,8 +14,8 @@ import (
 func TestRequestLogger(t *testing.T) {
 	var logBuffer bytes.Buffer
 	mockLogger := slog.New(slog.NewJSONHandler(&logBuffer, nil))
-
-	reqLogger := middleware.NewRequestLoggerMiddleware(mockLogger)
+	slog.SetDefault(mockLogger)
+	reqLogger := middleware.NewRequestLoggerMiddleware()
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "127.0.0.1"
@@ -35,8 +35,9 @@ func TestRequestLogger(t *testing.T) {
 func TestRequestLoggerXForwardedFor(t *testing.T) {
 	var logBuffer bytes.Buffer
 	mockLogger := slog.New(slog.NewJSONHandler(&logBuffer, nil))
+	slog.SetDefault(mockLogger)
 
-	reqLogger := middleware.NewRequestLoggerMiddleware(mockLogger)
+	reqLogger := middleware.NewRequestLoggerMiddleware()
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "127.0.0.1"

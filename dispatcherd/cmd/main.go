@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	EnvDev = "dev"
+	EnvDev  = "dev"
+	EnvProd = "prod"
 )
 
 type AppConfig struct {
@@ -32,7 +33,7 @@ func main() {
 	var appConfig = AppConfig{
 		ListenAddress:             ":3001",
 		LogLevel:                  slog.LevelDebug,
-		Environment:               EnvDev,
+		Environment:               EnvProd,
 		CORSOrigin:                "*",
 		RuleDirectory:             "/data/rules",
 		DispatcherConfigDirectory: "/data/dispatchers",
@@ -58,18 +59,20 @@ func main() {
 		loggerOptions := &slog.HandlerOptions{
 			Level: appConfig.LogLevel,
 		}
-		logger = slog.New(slog.NewJSONHandler(w, loggerOptions))
+		logger = slog.New(&logging.ContextHandler{Handler: slog.NewJSONHandler(w, loggerOptions)})
 	}
 
+	slog.SetDefault(logger)
+
 	// setup services
-	ruleRepo := repository.NewFilesystemRuleRepository(logger, appConfig.RuleDirectory)
-	dispatcherConfigRepo := repository.NewFileSystemDispatcherConfigRepository(logger, appConfig.DispatcherConfigDirectory)
-	ruleEngine := dispatch.NewRuleEngine(logger)
+	ruleRepo := repository.NewFilesystemRuleRepository(appConfig.RuleDirectory)
+	dispatcherConfigRepo := repository.NewFileSystemDispatcherConfigRepository(appConfig.DispatcherConfigDirectory)
+	ruleEngine := dispatch.NewRuleEngine()
 
 	// load rules from fs
 	rules, err := ruleRepo.ListRules(context.Background())
 	if err != nil {
-		logger.Error("failed to load rules", logging.LoggerFieldError, err)
+		logger.Error("failed to load rules", logging.FieldError, err)
 		os.Exit(1)
 	}
 	ruleEngine.SetRules(rules)
@@ -77,22 +80,21 @@ func main() {
 	// load dispatcher configs from fs
 	dispatcherConfigs, err := dispatcherConfigRepo.ListDispatcherConfigs(context.Background())
 	if err != nil {
-		logger.Error("failed to load dispatcher configs", logging.LoggerFieldError, err)
+		logger.Error("failed to load dispatcher configs", logging.FieldError, err)
 		os.Exit(1)
 	}
 
-	messageService := service.NewDefaultMessageService(logger, ruleEngine)
+	messageService := service.NewDefaultMessageService(ruleEngine)
 
 	for _, config := range dispatcherConfigs {
 		if err := messageService.LoadDispatcherConfig(config); err != nil {
-			logger.Error("failed to load dispatcher config "+config.Name, logging.LoggerFieldError, err)
+			logger.Error("failed to load dispatcher config "+config.Name, logging.FieldError, err)
 		}
 	}
 
 	// start api server
 	serverOptions := ServerOptions{
 		ListenAddress:  appConfig.ListenAddress,
-		Logger:         logger,
 		CorsOrigin:     appConfig.CORSOrigin,
 		MessageService: messageService,
 	}

@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"context"
+	"dispatcherd/logging"
 	"log/slog"
 	"math"
 )
@@ -30,8 +31,8 @@ func (l *LogDispatcher) Dispatch(ctx context.Context, msg *Message) error {
 	return nil
 }
 
-func NewLogDispatcher(logger *slog.Logger) *LogDispatcher {
+func NewLogDispatcher() *LogDispatcher {
 	return &LogDispatcher{
-		logger: logger,
+		logger: logging.GetLogger(logging.MessageProcessing),
 	}
 }

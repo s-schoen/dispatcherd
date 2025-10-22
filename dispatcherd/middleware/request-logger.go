@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"dispatcherd/logging"
 	"log/slog"
 	"net/http"
 	"time"
@@ -10,9 +11,9 @@ type RequestLoggerMiddleware struct {
 	logger *slog.Logger
 }
 
-func NewRequestLoggerMiddleware(logger *slog.Logger) *RequestLoggerMiddleware {
+func NewRequestLoggerMiddleware() *RequestLoggerMiddleware {
 	return &RequestLoggerMiddleware{
-		logger: logger,
+		logger: logging.GetLogger(logging.Audit).WithGroup("request"),
 	}
 }
 
@@ -37,7 +38,7 @@ func (h *RequestLoggerMiddleware) OnRequest(next http.Handler) http.Handler {
 				src = r.Header.Get("X-Forwarded-For")
 			}
 
-			h.logger.InfoContext(r.Context(), "access",
+			h.logger.InfoContext(r.Context(), "",
 				"src", src,
 				"status", tracker.statusCode,
 				"method", r.Method,

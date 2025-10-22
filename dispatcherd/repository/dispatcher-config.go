@@ -35,13 +35,13 @@ func (f FileSystemDispatcherConfigRepository) ListDispatcherConfigs(ctx context.
 			filePath := filepath.Join(f.configDirectory, file.Name())
 			fileContent, err := os.ReadFile(filePath)
 			if err != nil {
-				f.logger.ErrorContext(ctx, "failed to read dispatcher config file", logging.LoggerFieldError, err, "file", filePath)
+				f.logger.ErrorContext(ctx, "failed to read dispatcher config file", logging.FieldError, err, "file", filePath)
 				continue
 			}
 
 			var conf dispatch.DispatcherConfig
 			if err := json.Unmarshal(fileContent, &conf); err != nil {
-				f.logger.ErrorContext(ctx, "failed to unmarshal dispatcher config file", logging.LoggerFieldError, err, "file", filePath)
+				f.logger.ErrorContext(ctx, "failed to unmarshal dispatcher config file", logging.FieldError, err, "file", filePath)
 				continue
 			}
 			configs = append(configs, conf)
@@ -53,9 +53,9 @@ func (f FileSystemDispatcherConfigRepository) ListDispatcherConfigs(ctx context.
 	return configs, nil
 }
 
-func NewFileSystemDispatcherConfigRepository(logger *slog.Logger, configDirectory string) DispatcherConfigRepository {
+func NewFileSystemDispatcherConfigRepository(configDirectory string) DispatcherConfigRepository {
 	return FileSystemDispatcherConfigRepository{
-		logger:          logger,
+		logger:          logging.GetLogger(logging.DataAccess),
 		configDirectory: configDirectory,
 	}
 }

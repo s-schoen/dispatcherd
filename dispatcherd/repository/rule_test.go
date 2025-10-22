@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"dispatcherd/dispatch"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,8 +30,7 @@ func TestFilesystemRuleRepositoryListRules(t *testing.T) {
 	err = os.WriteFile(filepath.Join(tempDir, "ignore.txt"), []byte("ignore me"), 0644)
 	assert.NoError(t, err)
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	repo := NewFilesystemRuleRepository(logger, tempDir)
+	repo := NewFilesystemRuleRepository(tempDir)
 
 	rules, err := repo.ListRules(context.Background())
 	assert.NoError(t, err)
@@ -67,8 +65,7 @@ func TestFilesystemRuleRepositoryListRules(t *testing.T) {
 
 func TestFilesystemRuleRepositoryListRulesFailed(t *testing.T) {
 	t.Run("non-existent directory", func(t *testing.T) {
-		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-		repo := NewFilesystemRuleRepository(logger, "/non-existent-dir")
+		repo := NewFilesystemRuleRepository("/non-existent-dir")
 
 		_, err := repo.ListRules(context.Background())
 		assert.Error(t, err)
@@ -85,8 +82,7 @@ func TestFilesystemRuleRepositoryListRulesFailed(t *testing.T) {
 		err = os.WriteFile(filepath.Join(tempDir, "rule1.json"), []byte(malformedJSON), 0644)
 		assert.NoError(t, err)
 
-		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-		repo := NewFilesystemRuleRepository(logger, tempDir)
+		repo := NewFilesystemRuleRepository(tempDir)
 
 		rules, err := repo.ListRules(context.Background())
 		assert.NoError(t, err)
@@ -107,8 +103,7 @@ func TestFilesystemRuleRepositoryListRulesFailed(t *testing.T) {
 		err = os.Chmod(ruleFile, 0222)
 		assert.NoError(t, err)
 
-		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-		repo := NewFilesystemRuleRepository(logger, tempDir)
+		repo := NewFilesystemRuleRepository(tempDir)
 
 		rules, err := repo.ListRules(context.Background())
 		assert.NoError(t, err)

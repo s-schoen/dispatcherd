@@ -1,23 +1,12 @@
 package dispatch_test
 
 import (
-	"bytes"
 	"context"
 	"dispatcherd/dispatch"
-	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func setupEngine(t *testing.T) *dispatch.DefaultRuleEngine {
-	t.Helper()
-
-	var logBuffer bytes.Buffer
-	mockLogger := slog.New(slog.NewJSONHandler(&logBuffer, nil))
-
-	return dispatch.NewRuleEngine(mockLogger)
-}
 
 func createTestMessage(t *testing.T, tags map[string]string) *dispatch.Message {
 	t.Helper()
@@ -25,7 +14,7 @@ func createTestMessage(t *testing.T, tags map[string]string) *dispatch.Message {
 }
 
 func TestMessageWithNoTags(t *testing.T) {
-	engine := setupEngine(t)
+	engine := dispatch.NewRuleEngine()
 	msg := createTestMessage(t, nil)
 	matched, err := engine.ProcessMessage(context.Background(), msg)
 	assert.NoError(t, err)
@@ -33,7 +22,7 @@ func TestMessageWithNoTags(t *testing.T) {
 }
 
 func TestRuleEquals(t *testing.T) {
-	engine := setupEngine(t)
+	engine := dispatch.NewRuleEngine()
 
 	rules := []dispatch.Rule{
 		{
@@ -85,7 +74,7 @@ func TestRuleEquals(t *testing.T) {
 }
 
 func TestRuleMultiTag(t *testing.T) {
-	engine := setupEngine(t)
+	engine := dispatch.NewRuleEngine()
 
 	rules := []dispatch.Rule{
 		{
@@ -146,7 +135,7 @@ func TestRuleMultiTag(t *testing.T) {
 }
 
 func TestMultipleRules(t *testing.T) {
-	engine := setupEngine(t)
+	engine := dispatch.NewRuleEngine()
 
 	rules := []dispatch.Rule{
 		{

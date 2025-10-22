@@ -19,7 +19,7 @@ type MessageService interface {
 	LoadDispatcherConfig(config dispatch.DispatcherConfig) error
 }
 
-type DispatcherFactoryFunc func(logger *slog.Logger, typeName string) (dispatch.Dispatcher, error)
+type DispatcherFactoryFunc func(typeName string) (dispatch.Dispatcher, error)
 
 type messageService struct {
 	logger            *slog.Logger
@@ -29,9 +29,9 @@ type messageService struct {
 	dispatcherFactory DispatcherFactoryFunc
 }
 
-func NewMessageService(logger *slog.Logger, ruleEngine dispatch.RuleEngine, factoryFunc DispatcherFactoryFunc) MessageService {
+func NewMessageService(ruleEngine dispatch.RuleEngine, factoryFunc DispatcherFactoryFunc) MessageService {
 	return &messageService{
-		logger:            logger,
+		logger:            logging.GetLogger(logging.MessageProcessing),
 		ruleEngine:        ruleEngine,
 		configs:           make(map[string]dispatch.DispatcherConfig),
 		validator:         validator.New(),
@@ -39,8 +39,8 @@ func NewMessageService(logger *slog.Logger, ruleEngine dispatch.RuleEngine, fact
 	}
 }
 
-func NewDefaultMessageService(logger *slog.Logger, ruleEngine dispatch.RuleEngine) MessageService {
-	return NewMessageService(logger, ruleEngine, dispatch.DispatcherFactory)
+func NewDefaultMessageService(ruleEngine dispatch.RuleEngine) MessageService {
+	return NewMessageService(ruleEngine, dispatch.DispatcherFactory)
 }
 
 func (s *messageService) QueueMessage(ctx context.Context, message *dispatch.Message) error {
@@ -57,7 +57,7 @@ func (s *messageService) QueueMessage(ctx context.Context, message *dispatch.Mes
 		// use default dispatcher
 		defaultDispatchers, err := s.getDefaultDispatchers()
 		if err != nil {
-			s.logger.ErrorContext(msgCtx, "failed to get default dispatchers", logging.LoggerFieldError, err)
+			s.logger.ErrorContext(msgCtx, "failed to get default dispatchers", logging.FieldError, err)
 			return fmt.Errorf("getting default dispatchers: %w", err)
 		}
 
@@ -71,7 +71,7 @@ func (s *messageService) QueueMessage(ctx context.Context, message *dispatch.Mes
 		for _, dispatcherName := range dispatcherNames {
 			dispatcher, err := s.getDispatcherByName(dispatcherName)
 			if err != nil {
-				s.logger.ErrorContext(msgCtx, "failed to get dispatcher "+dispatcherName, logging.LoggerFieldError, err)
+				s.logger.ErrorContext(msgCtx, "failed to get dispatcher "+dispatcherName, logging.FieldError, err)
 				return fmt.Errorf("getting dispatcher '%s': %w", dispatcherName, err)
 			}
 			s.invokeDispatchers(msgCtx, message, []dispatch.Dispatcher{dispatcher})
@@ -85,7 +85,7 @@ func (s *messageService) QueueMessage(ctx context.Context, message *dispatch.Mes
 func (s *messageService) invokeDispatchers(ctx context.Context, message *dispatch.Message, dispatchers []dispatch.Dispatcher) {
 	for _, dispatcher := range dispatchers {
 		if err := dispatcher.Dispatch(ctx, message); err != nil {
-			s.logger.ErrorContext(ctx, "failed to dispatch message", logging.LoggerFieldError, err)
+			s.logger.ErrorContext(ctx, "failed to dispatch message", logging.FieldError, err)
 			break
 		}
 	}
@@ -93,7 +93,7 @@ func (s *messageService) invokeDispatchers(ctx context.Context, message *dispatc
 
 func (s *messageService) LoadDispatcherConfig(config dispatch.DispatcherConfig) error {
 	// check if dispatcher type exists
-	dispatcher, err := s.dispatcherFactory(s.logger, config.Type)
+	dispatcher, err := s.dispatcherFactory(config.Type)
 	if err != nil {
 		return ErrDispatcherNotFound
 	}
@@ -110,7 +110,7 @@ func (s *messageService) LoadDispatcherConfig(config dispatch.DispatcherConfig) 
 
 func (s *messageService) getDispatcherByName(name string) (dispatch.Dispatcher, error) {
 	if config, ok := s.configs[name]; ok {
-		dispatcher, err := s.dispatcherFactory(s.logger, config.Type)
+		dispatcher, err := s.dispatcherFactory(config.Type)
 		if err != nil {
 			return nil, ErrDispatcherNotFound
 		}

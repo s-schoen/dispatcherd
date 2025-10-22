@@ -9,17 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewLogDispatcher(t *testing.T) {
-	logger := slog.New(slog.NewJSONHandler(&bytes.Buffer{}, nil))
-	dispatcher := NewLogDispatcher(logger)
-	assert.NotNil(t, dispatcher)
-	assert.Equal(t, logger, dispatcher.logger)
-}
-
 func TestLogDispatcherDispatch(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
-	dispatcher := NewLogDispatcher(logger)
+	slog.SetDefault(logger)
+	dispatcher := NewLogDispatcher()
 
 	msg := &Message{
 		Title:   "Test Title",

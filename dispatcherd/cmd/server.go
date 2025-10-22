@@ -8,7 +8,6 @@ import (
 	"dispatcherd/service"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,14 +21,12 @@ import (
 
 type ServerOptions struct {
 	ListenAddress  string
-	Logger         *slog.Logger
 	CorsOrigin     string
 	MessageService service.MessageService
 }
 
 type Server struct {
 	ListenAddress  string
-	logger         *slog.Logger
 	router         chi.Router
 	corsOrigin     string
 	messageService service.MessageService
@@ -39,13 +36,14 @@ func NewServer(opts ServerOptions) *Server {
 	return &Server{
 		ListenAddress:  opts.ListenAddress,
 		router:         chi.NewRouter(),
-		logger:         opts.Logger,
 		corsOrigin:     opts.CorsOrigin,
 		messageService: opts.MessageService,
 	}
 }
 
 func (s *Server) Start() {
+	logger := logging.GetLogger(logging.API)
+
 	corsOptions := cors.Options{
 		AllowedOrigins: []string{s.corsOrigin},
 		AllowedMethods: []string{"GET", "POST", "PATCH", "DELETE"},
@@ -53,7 +51,7 @@ func (s *Server) Start() {
 
 	// register middleware
 	requestIDMiddleware := middleware.NewUUIDv4RequestIDMiddleWare()
-	requestLoggerMiddleware := middleware.NewRequestLoggerMiddleware(s.logger)
+	requestLoggerMiddleware := middleware.NewRequestLoggerMiddleware()
 
 	s.router.Use(cors.New(corsOptions).Handler)
 	s.router.Use(middleware.SecurityHeaders())
@@ -63,7 +61,7 @@ func (s *Server) Start() {
 	s.router.Use(chiMiddleware.AllowContentType("application/json"))
 	s.router.Use(chiMiddleware.Recoverer)
 
-	dispatchHandler := handler.NewDispatchHandler(s.logger, s.messageService)
+	dispatchHandler := handler.NewDispatchHandler(s.messageService)
 
 	// register public routes
 	s.router.Get("/health", handler.Make(handler.HandleHealth))
@@ -100,25 +98,25 @@ func (s *Server) Start() {
 		go func() {
 			<-shutdownCtx.Done()
 			if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
-				s.logger.Warn("context deadline exceeded, forcing shutdown")
+				logger.Warn("context deadline exceeded, forcing shutdown")
 			}
 		}()
 
 		// Trigger graceful shutdown
-		s.logger.Info("received signal to shut down server gracefully")
+		logger.Info("received signal to shut down server gracefully")
 		err := server.Shutdown(shutdownCtx)
 		if err != nil {
-			s.logger.Error("failed to shutdown server gracefully", logging.LoggerFieldError, err)
+			logger.Error("failed to shutdown server gracefully", logging.FieldError, err)
 		}
 		serverStopCtx()
 	}()
 
 	// start listening for connections
-	s.logger.Info("listening on " + s.ListenAddress)
+	logger.Info("listening on " + s.ListenAddress)
 	err := server.ListenAndServe()
 
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		s.logger.Error("failed to start server on "+s.ListenAddress, logging.LoggerFieldError, err)
+		logger.Error("failed to start server on "+s.ListenAddress, logging.FieldError, err)
 		panic(err)
 	}
 

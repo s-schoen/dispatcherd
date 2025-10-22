@@ -2,6 +2,7 @@ package handler
 
 import (
 	"dispatcherd/dispatch"
+	"dispatcherd/logging"
 	"dispatcherd/service"
 	"errors"
 	"log/slog"
@@ -26,9 +27,9 @@ type MessageHandler struct {
 	messageSvc service.MessageService
 }
 
-func NewDispatchHandler(logger *slog.Logger, msgSvc service.MessageService) *MessageHandler {
+func NewDispatchHandler(msgSvc service.MessageService) *MessageHandler {
 	return &MessageHandler{
-		logger:     logger,
+		logger:     logging.GetLogger(logging.API),
 		validate:   validator.New(validator.WithRequiredStructEnabled()),
 		messageSvc: msgSvc,
 	}
