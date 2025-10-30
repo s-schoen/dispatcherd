@@ -18,3 +18,4 @@
 - **Logging:** Use the structured logger from the `logging` package. Provide context with the log message if applicable.
 - **Mocks:** Use `mockery` with the `matryer` format to generate mocks for interfaces. Do not use any other mocking framework.
 - **Testing**: Use `testify` for assertions. Before tests can be executed, mocks must be generated.
+- **Documentation** Use `godoc` format to document code. Be precise and short. Assume the target audience is an experienced go developer.
