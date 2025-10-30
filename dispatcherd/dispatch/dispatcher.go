@@ -26,6 +26,8 @@ func DispatcherFactory(dispatcherType string) (Dispatcher, error) {
 		return NewLogDispatcher(), nil
 	case "counter":
 		return NewCounterDispatcher(), nil
+	case "mail":
+		return NewMailDispatcher(), nil
 	default:
 		return nil, ErrUnknownDispatcherType
 	}
